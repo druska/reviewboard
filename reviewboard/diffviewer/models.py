@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime
 
 from django.db import models
@@ -5,6 +6,17 @@ from django.utils.translation import ugettext_lazy as _
 from djblets.util.fields import Base64Field
 
 from reviewboard.scmtools.models import Repository
+
+
+class FileDiffData(models.Model):
+    """
+    Contains hash and base64 pairs.
+
+    These pairs are used to reduce diff database storage. There is still an
+    AutoField id field as the primary key because of a Base64Field bug.
+    """
+    binary_hash = models.CharField(_("hash"), max_length=40)
+    binary = Base64Field(_("base64"))
 
 
 class FileDiff(models.Model):
@@ -32,15 +44,57 @@ class FileDiff(models.Model):
                                        max_length=512)
     dest_detail = models.CharField(_("destination file details"),
                                    max_length=512)
-    diff = Base64Field(_("diff"), db_column="diff_base64")
+    diff64 = Base64Field(_("diff"), db_column="diff_base64", blank=True)
+    diff_hash = models.ForeignKey('FileDiffData', null=True)
     binary = models.BooleanField(_("binary file"), default=False)
-    parent_diff = Base64Field(_("parent diff"), db_column="parent_diff_base64",
-                              blank=True)
+    parent_diff64 = Base64Field(_("parent diff"),
+                                db_column="parent_diff_base64", blank=True)
+    parent_diff_hash = models.ForeignKey('FileDiffData', null=True,
+                                         related_name='parent_filediff_set')
     status = models.CharField(_("status"), max_length=1, choices=STATUSES)
 
     @property
     def deleted(self):
         return self.status == 'D'
+
+    @property
+    def diff(self):
+        # If the diff is not in FileDiffData, it is in FileDiff.
+        if not self.diff_hash:
+            return self.diff64
+        else:  # Data exists in FileDiffData, retrieve it.
+            return self.diff_hash.binary
+
+    @property
+    def parent_diff(self):
+        if not self.parent_diff_hash:
+            return self.parent_diff64
+        else:
+            return self.parent_diff_hash.binary
+
+    @diff.setter
+    def diff(self, diff):
+        hashkey = self._hash_hexdigest(diff)
+
+        # Add hash to table if it doesn't exist, and set diff_hash to this.
+        self.diff_hash, is_new = FileDiffData.objects.get_or_create(
+            binary_hash=hashkey, defaults={'binary': diff})
+        self.diff64 = ""
+
+    @parent_diff.setter
+    def parent_diff(self, parent_diff):
+        if parent_diff != "":
+            hashkey = self._hash_hexdigest(parent_diff)
+
+            # Add hash to table if it doesn't exist, and set diff_hash to this.
+            self.parent_diff_hash, is_new = FileDiffData.objects.get_or_create(
+                binary_hash=hashkey, defaults={'binary': diff})
+            self.parent_diff64 = ""
+
+    def _hash_hexdigest(self, diff):
+        hasher = hashlib.sha1()
+        hasher.update(diff)
+        return hasher.hexdigest()
 
     def __unicode__(self):
         return u"%s (%s) -> %s (%s)" % (self.source_file, self.source_revision,
