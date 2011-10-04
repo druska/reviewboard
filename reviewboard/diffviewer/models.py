@@ -3,20 +3,33 @@ from datetime import datetime
 
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
-from djblets.util.fields import Base64Field
+from djblets.util.fields import Base64Field, Base64DecodedValue
 
 from reviewboard.scmtools.models import Repository
+
+class FileDiffDataManager(models.Manager):
+    """
+    A custom manager for FileDiffData
+
+    Sets the binary data to a Base64DecodedValue, so that Base64Field is
+    forced to encode the data. This is a workaround to Base64Field checking
+    if the object has been saved into the database using the pk.
+    """
+    def get_or_create(self, *args, **kwds):
+        if kwds['defaults']['binary']:
+            kwds['defaults']['binary'] = Base64DecodedValue(kwds['defaults']['binary'])
+        return super(FileDiffDataManager, self).get_or_create(*args, **kwds)
 
 
 class FileDiffData(models.Model):
     """
     Contains hash and base64 pairs.
 
-    These pairs are used to reduce diff database storage. There is still an
-    AutoField id field as the primary key because of a Base64Field bug.
+    These pairs are used to reduce diff database storage.
     """
-    binary_hash = models.CharField(_("hash"), max_length=40)
+    binary_hash = models.CharField(_("hash"), max_length=40, primary_key=True)
     binary = Base64Field(_("base64"))
+    objects = FileDiffDataManager()
 
 
 class FileDiff(models.Model):
