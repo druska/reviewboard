@@ -7,6 +7,7 @@ from djblets.util.fields import Base64Field, Base64DecodedValue
 
 from reviewboard.scmtools.models import Repository
 
+
 class FileDiffDataManager(models.Manager):
     """
     A custom manager for FileDiffData
@@ -15,10 +16,12 @@ class FileDiffDataManager(models.Manager):
     forced to encode the data. This is a workaround to Base64Field checking
     if the object has been saved into the database using the pk.
     """
-    def get_or_create(self, *args, **kwds):
-        if kwds['defaults']['binary']:
-            kwds['defaults']['binary'] = Base64DecodedValue(kwds['defaults']['binary'])
-        return super(FileDiffDataManager, self).get_or_create(*args, **kwds)
+    def get_or_create(self, *args, **kwargs):
+        if kwargs['defaults']['binary']:
+            kwargs['defaults']['binary'] =\
+                Base64DecodedValue(kwargs['defaults']['binary'])
+
+        return super(FileDiffDataManager, self).get_or_create(*args, **kwargs)
 
 
 class FileDiffData(models.Model):
