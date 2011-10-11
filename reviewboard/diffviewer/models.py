@@ -3,25 +3,10 @@ from datetime import datetime
 
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
-from djblets.util.fields import Base64Field, Base64DecodedValue
+from djblets.util.fields import Base64Field
 
+from reviewboard.diffviewer.managers import FileDiffDataManager
 from reviewboard.scmtools.models import Repository
-
-
-class FileDiffDataManager(models.Manager):
-    """
-    A custom manager for FileDiffData
-
-    Sets the binary data to a Base64DecodedValue, so that Base64Field is
-    forced to encode the data. This is a workaround to Base64Field checking
-    if the object has been saved into the database using the pk.
-    """
-    def get_or_create(self, *args, **kwargs):
-        if kwargs['defaults']['binary']:
-            kwargs['defaults']['binary'] =\
-                Base64DecodedValue(kwargs['defaults']['binary'])
-
-        return super(FileDiffDataManager, self).get_or_create(*args, **kwargs)
 
 
 class FileDiffData(models.Model):
@@ -78,7 +63,8 @@ class FileDiff(models.Model):
         # If the diff is not in FileDiffData, it is in FileDiff.
         if not self.diff_hash:
             return self.diff64
-        else:  # Data exists in FileDiffData, retrieve it.
+        else:
+            # Data exists in FileDiffData, retrieve it.
             return self.diff_hash.binary
 
     @property
