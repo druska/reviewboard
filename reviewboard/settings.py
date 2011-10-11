@@ -3,6 +3,8 @@
 import os
 import sys
 
+from django.conf import settings
+
 # Can't import django.utils.translation yet
 _ = lambda s: s
 
@@ -94,7 +96,8 @@ TEMPLATE_DIRS = (
     os.path.join(REVIEWBOARD_ROOT, 'templates'),
 )
 
-INSTALLED_APPS = (
+RB_BUILTIN_APPS = [
+    'compress',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -120,8 +123,8 @@ INSTALLED_APPS = (
     'reviewboard.scmtools',
     'reviewboard.site',
     'reviewboard.webapi',
-    'django_evolution', # Must be last
-)
+]
+RB_EXTRA_APPS = []
 
 WEB_API_ENCODERS = (
     'djblets.webapi.encoders.ResourceAPIEncoder',
@@ -165,6 +168,9 @@ try:
 except ImportError, exc:
     dependency_error('Unable to import settings_local.py: %s' % exc)
 
+
+INSTALLED_APPS = RB_BUILTIN_APPS + RB_EXTRA_APPS + ['django_evolution']
+
 TEMPLATE_DEBUG = DEBUG
 
 if not LOCAL_ROOT:
@@ -203,4 +209,80 @@ SESSION_COOKIE_PATH = SITE_ROOT
 # The list of directories that will be searched to generate a media serial.
 MEDIA_SERIAL_DIRS = ["admin", "djblets", "rb"]
 
+_COMPRESS_EXTRA_CONTEXT = {
+    'MEDIA_SERIAL': lambda: settings.MEDIA_SERIAL,
+}
+
+# Media compression
+COMPRESS_JS = {
+    'common': {
+        'source_filenames': (
+            'rb/js/jquery.form.js',
+            'rb/js/datastore.js',
+            'rb/js/ui.autocomplete.js',
+            'rb/js/common.js',
+        ),
+        'output_filename': 'rb/js/base.min.js',
+        'extra_context': _COMPRESS_EXTRA_CONTEXT,
+    },
+    'reviews': {
+        'source_filenames': (
+            'rb/js/diffviewer.js',
+            'rb/js/reviews.js',
+            'rb/js/screenshots.js',
+        ),
+        'output_filename': 'rb/js/reviews.min.js',
+        'extra_context': _COMPRESS_EXTRA_CONTEXT,
+    },
+    'admin': {
+        'source_filenames': (
+            'rb/js/flot/jquery.flot.min.js',
+            'rb/js/flot/jquery.flot.pie.min.js',
+            'rb/js/flot/jquery.flot.selection.min.js',
+            'rb/js/jquery.masonry.js',
+            'rb/js/admin.js',
+        ),
+        'output_filename': 'rb/js/admin.min.js',
+        'extra_context': _COMPRESS_EXTRA_CONTEXT,
+    },
+    'repositoryform': {
+        'source_filenames': (
+            'rb/js/repositoryform.js',
+        ),
+        'output_filename': 'rb/js/admin.min.js',
+        'extra_context': _COMPRESS_EXTRA_CONTEXT,
+    },
+}
+
+COMPRESS_CSS = {
+    'common': {
+        'source_filenames': (
+            'rb/css/common.css',
+            'rb/css/dashboard.css',
+            'rb/css/search.css',
+        ),
+        'output_filename': 'rb/css/common.min.css',
+        'extra_context': _COMPRESS_EXTRA_CONTEXT,
+    },
+    'reviews': {
+        'source_filenames': (
+            'rb/css/diffviewer.css',
+            'rb/css/reviews.css',
+            'rb/css/syntax.css',
+        ),
+        'output_filename': 'rb/css/reviews.min.css',
+        'extra_context': _COMPRESS_EXTRA_CONTEXT,
+    },
+    'admin': {
+        'source_filenames': (
+            'rb/css/admin.css',
+            'rb/css/admin-dashboard.css',
+        ),
+        'output_filename': 'rb/css/admin.min.css',
+        'extra_context': _COMPRESS_EXTRA_CONTEXT,
+    },
+}
+
+
+# Packages to unit test
 TEST_PACKAGES = ['reviewboard']

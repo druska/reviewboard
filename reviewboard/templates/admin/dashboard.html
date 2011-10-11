@@ -1,5 +1,6 @@
 {% extends "admin/base_site.html" %}
 {% load adminmedia %}
+{% load compressed %}
 {% load i18n %}
 {% load log %}
 {% load rbadmintags %}
@@ -11,11 +12,7 @@
 {% block extrahead %}
 <!--[if IE]><script src="{{MEDIA_URL}}rb/js/flot/excanvas.min.js?{{MEDIA_SERIAL}}"></script><![endif]-->
 <script type="text/javascript" src="{{MEDIA_URL}}djblets/js/jquery-1.3.2.min.js?{{MEDIA_SERIAL}}"></script>
-<script type="text/javascript" src="{{MEDIA_URL}}rb/js/flot/jquery.flot.min.js?{{MEDIA_SERIAL}}"></script>
-<script type="text/javascript" src="{{MEDIA_URL}}rb/js/flot/jquery.flot.pie.min.js?{{MEDIA_SERIAL}}"></script>
-<script type="text/javascript" src="{{MEDIA_URL}}rb/js/flot/jquery.flot.selection.min.js?{{MEDIA_SERIAL}}"></script>
-<script type="text/javascript" src="{{MEDIA_URL}}rb/js/jquery.masonry.js?{{MEDIA_SERIAL}}"></script>
-<script type="text/javascript" src="{{MEDIA_URL}}rb/js/admin.js?{{MEDIA_SERIAL}}"></script>
+{% compressed_js "admin" %}
 {% endblock %}
 
 {% block pretitle %}
@@ -30,19 +27,14 @@
 <div id="admin-dashboard">
  <div id="dashboard-view">
   <div id="admin-widgets">
-   {% admin_widget "stats-large" _("Review Board Activity") %}
-   {% admin_widget "repositories" _("Repositories") %}
-   {% admin_widget "user-activity" _("User Activity") %}
+{% for widget in primary_widgets %}
+   {% admin_widget widget %}
+{% endfor %}
   </div>
   <div class="admin-extras">
-   {% admin_widget "request-statuses" _("Request Statuses") %}
-   {% admin_widget "recent-actions" _("Recent Actions") %}
-   {% admin_widget "review-groups" _("Review Groups") "rb/images/admin/set-auth.png" %}
-{% if has_cache_stats %}
-   {% admin_widget "server-cache" _("Server Cache") "rb/images/admin/set-storage.png" %}
-{% endif %}
-   {% admin_widget "news" _("Review Board News") "rb/images/rss.png" %}
-   {% admin_widget "stats" _("Database Stats") %}
+{% for widget in secondary_widgets %}
+   {% admin_widget widget %}
+{% endfor %}
   </div>
  </div>
 </div>
