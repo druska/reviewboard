@@ -137,9 +137,14 @@ def include_enabled_extensions(settings):
     so that operations like syncdb and evolve will take extensions
     into consideration.
     """
+    # Some of our checks require access to django.conf.settings, so
+    # tell Django about our settings.
+    #
+    # This must go before the imports.
+    setup_environ(settings)
+
     from django.db.models.loading import load_app
     from django.db import DatabaseError
-    from djblets.extensions.models import RegisteredExtension
 
     from reviewboard.extensions.base import get_extension_manager
 
