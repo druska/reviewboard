@@ -1,6 +1,7 @@
 from django.db import models
 from djblets.util.fields import Base64DecodedValue
 
+
 class FileDiffDataManager(models.Manager):
     """
     A custom manager for FileDiffData
