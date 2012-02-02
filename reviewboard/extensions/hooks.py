@@ -5,8 +5,8 @@ import djblets.extensions.hooks as djblets_hooks
 class DashboardHook(ExtensionHook):
     __metaclass__ = ExtensionHookPoint
 
-    def __init__(self, entries=[], *args, **kwargs):
-        super(DashboardHook, self).__init__(*args, **kwargs)
+    def __init__(self, extension, entries=[], *args, **kwargs):
+        super(DashboardHook, self).__init__(extension, *args, **kwargs)
         self.entries = entries
 
 
@@ -40,13 +40,13 @@ class ReviewRequestDetailHook(ExtensionHook):
     __metaclass__ = ExtensionHookPoint
 
     def get_field_id(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_label(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_detail(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_wide(self):
         """Returns whether or not this detail spans multiple columns."""

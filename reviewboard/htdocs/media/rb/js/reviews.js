@@ -118,10 +118,12 @@ var gCommentIssueManager = new function() {
     // Helper function to set the state of a comment
     function requestState(comment, state) {
         comment.ready(function() {
+	    var old_issue_status = comment.issue_status;
             comment.issue_status = state;
             comment.save({
                 success: function(rsp) {
-                    notifyCallbacks(comment.id, comment.issue_status);
+                    notifyCallbacks(comment.id, comment.issue_status,
+				    old_issue_status);
 
                     /*
                      * We don't want the current user to receive the
@@ -141,9 +143,9 @@ var gCommentIssueManager = new function() {
      * Helper function that notifies all callbacks registered for
      * a particular comment
      */
-    function notifyCallbacks(comment_id, issue_status) {
+    function notifyCallbacks(comment_id, issue_status, old_issue_status) {
         for (var i = 0; i < callbacks[comment_id].length; i++) {
-            callbacks[comment_id][i](issue_status);
+            callbacks[comment_id][i](issue_status, old_issue_status);
         }
     }
 }();
@@ -217,20 +219,20 @@ function linkifyText(text) {
                 extra = parts[2];
             }
 
-            return '<a href="' + url + '">' + url + '</a>' + extra;
+            return '<a target="_blank" href="' + url + '">' + url + '</a>' + extra;
         });
 
 
     /* Linkify /r/#/ review request numbers */
     text = text.replace(
         /(^|\s|&lt;)\/(r\/\d+(\/[\-A-Za-z0-9+&@#\/%?=~_()|!:,.;]*[\-A-Za-z0-9+&@#\/%=~_()|])?)/g,
-        '$1<a href="' + SITE_ROOT + '$2">/$2</a>');
+        '$1<a target="_blank" href="' + SITE_ROOT + '$2">/$2</a>');
 
     /* Bug numbers */
     if (gBugTrackerURL != "") {
         text = text.replace(/\b(bug|issue) (#[^.\s]+|#?\d+)/gi,
             function(m1, m2, m3) {
-                return '<a href="' + gBugTrackerURL.replace("%s", m3) +
+                return '<a target="_blank" href="' + gBugTrackerURL.replace("%s", m3) +
                        '">' + m1 + '</a>';
             });
     }
@@ -668,6 +670,22 @@ $.fn.commentIssue = function(review_id, comment_id, comment_type,
         }
     }
 
+    self.update_issue_summary_table = function(new_status, old_status) {
+	var comment_id = self.comment_id;
+	var entry = $('#summary-table-entry-' + comment_id);
+
+	// Remove old status class and decrement counter.
+	entry.removeClass(old_status);
+	var old_counter = $('#' + old_status + '-counter');
+	old_counter.text(parseInt(old_counter.text(), 10) - 1);
+
+	// Add new status class, update text, and increment counter.
+	entry.addClass(new_status);
+	entry.find('.status').text(new_status);
+	var new_counter = $('#' + new_status + '-counter');
+	new_counter.text(parseInt(new_counter.text(), 10) + 1);
+    }
+
     var open_state = {
         enter: function() {
             $(".issue-button.reopen", self).hide();
@@ -727,6 +745,10 @@ $.fn.commentIssue = function(review_id, comment_id, comment_type,
     // Register to watch updates on the comment issue state
     gCommentIssueManager
         .registerCallback(self.comment_id, self.enter_state);
+
+    // Register to update issue summary table
+    gCommentIssueManager
+	.registerCallback(self.comment_id, self.update_issue_summary_table);
 
     return self;
 }
@@ -2465,10 +2487,16 @@ $(document).ready(function() {
         $(this).closest(".box").toggleClass('collapsed');
     });
 
-    /* Expand all reviews */
+    /* Expand all reviews and issue summary table */
     $("#expand-all").click(function() {
         $(".collapsed").removeClass("collapsed");
         return false;
+    });
+
+    /* Collapse all reviews and issue summary table */
+    $("#collapse-all").click(function() {
+	$(".box").addClass("collapsed");
+	return false;
     });
 
     gCommentDlg = $("#comment-detail")
@@ -2558,6 +2586,19 @@ $(document).ready(function() {
     }
 
     loadDiffFragments("diff_fragments", "comment_container");
+
+    $(".summary-table-description").click(function() {
+        /*
+         * Extract the href attribute and remove the leading
+         * '#', then attach '#comment-' and '-issue' to
+         * find the comment's location. Then find the
+         * closest box class and uncollapse it.
+         */
+        var issueId = '#comment-' +
+                      $(this).find("a.summary-anchor").attr("href").slice(1) +
+                      '-issue';
+        $(issueId).closest(".box").removeClass("collapsed");
+    });
 });
 
 // vim: set et:sw=4:
